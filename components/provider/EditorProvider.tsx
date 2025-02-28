@@ -4,7 +4,7 @@ import {
   ImageUploadContext,
 } from "@/lib/context";
 import { elementsReducer } from "@/lib/editorReducer";
-import { EditorElement } from "@/lib/type";
+import { EditorElement, FrameElement } from "@/lib/type";
 import React from "react";
 
 type Props = {
@@ -34,9 +34,9 @@ const EditorProvider: React.FC<Props> = ({ children }) => {
       if (element.id === selectedElement.id) {
         return element;
       }
-      if (element.type === "Frame" && (element as any).elements) {
+      if (element.type === "Frame" && (element as FrameElement).elements) {
         const foundElement = findAndUpdateSelectedElement(
-          (element as any).elements,
+          (element as FrameElement).elements,
           selectedElement
         );
         if (foundElement) {

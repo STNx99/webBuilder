@@ -51,7 +51,7 @@ const Editor = () => {
         console.error(e);
       }
     }
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     dispatch({
