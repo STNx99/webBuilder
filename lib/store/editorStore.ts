@@ -10,7 +10,6 @@ import {
 import { EditorElement } from "../type";
 import { v4 as uuidv4 } from "uuid";
 
-
 type ContainerElement =
   | FrameElement
   | CarouselElement
@@ -38,6 +37,12 @@ interface EditorState {
 
   // Basic state management
   addElement: (element: EditorElement) => void;
+  insertElement: (
+    element: EditorElement,
+    projectId: string,
+    index: number,
+    parentId?: string
+  ) => Promise<void>;
   updateElement: (id: string, updates: Partial<EditorElement>) => void;
   deleteElement: (id: string) => void;
   updateAllElements: (updates: Partial<EditorElement>) => void;
@@ -57,6 +62,12 @@ interface EditorState {
     updates: Partial<EditorElement>
   ) => Promise<void>;
   deleteElementOptimistically: (id: string) => Promise<void>;
+  insertElementIntoFrame: (
+    element: EditorElement,
+    frameId: string,
+    projectId: string,
+    index?: number
+  ) => Promise<void>;
 
   // Helper to update history
   _updateHistory: (newElements: EditorElement[]) => void;
@@ -308,7 +319,7 @@ export const useEditorStore = create<EditorState>()(
         ): EditorElement => {
           const newElement = {
             ...element,
-            id: uuidv4(),
+            id: `${element.type}-${uuidv4()}`,
             projectId,
             parentId,
             Type: element.type,
@@ -367,7 +378,85 @@ export const useEditorStore = create<EditorState>()(
           });
         }
       },
+      insertElement: async (element, projectId, index, parentId) => {
+        const elementsToCreate: EditorElement[] = [];
 
+        const prepareElements = (
+          element: EditorElement,
+          parentId?: string
+        ): EditorElement => {
+          const newElement = {
+            ...element,
+            id: uuidv4(),
+            projectId,
+            parentId,
+            Type: element.type,
+          };
+
+          elementsToCreate.push(newElement);
+
+          if (isContainerElement(element)) {
+            return {
+              ...newElement,
+              elements: element.elements.map((childElement) =>
+                prepareElements(childElement, newElement.id)
+              ),
+            };
+          }
+
+          return newElement;
+        };
+
+        const preparedElement = prepareElements(element, parentId);
+
+        // Immediately update UI
+        if (parentId) {
+          const parentElement = get()._findElementById(
+            parentId
+          ) as ContainerElement;
+          if (parentElement && parentElement.elements) {
+            const updatedElements = [...parentElement.elements];
+            updatedElements.splice(index, 0, preparedElement);
+            get().updateElement(parentId, {
+              elements: updatedElements,
+            });
+          }
+        } else {
+          // Insert at root level
+          const { elements } = get();
+          const updatedElements = [...elements];
+          updatedElements.splice(index, 0, preparedElement);
+          get()._updateHistory(updatedElements);
+        }
+
+        set({ isLoading: true, error: null });
+
+        try {
+          // const response = await fetch(`/api/element/${projectId}`, {
+          //   method: "POST",
+          //   body: JSON.stringify(preparedElement),
+          //   headers: {
+          //     "Content-Type": "application/json",
+          //   },
+          // });
+          // if (!response.ok) {
+          //   throw new Error("Failed to create element");
+          // }
+
+          set({ isLoading: false });
+        } catch (error) {
+          console.error("Failed to insert element:", error);
+          // Rollback on error
+          get().deleteElement(preparedElement.id);
+          set({
+            isLoading: false,
+            error:
+              error instanceof Error
+                ? error.message
+                : "Failed to insert element",
+          });
+        }
+      },
       updateElementOptimistically: async (id, updates) => {
         const currentElement = get()._findElementById(id);
         const projectId = currentElement?.projectId;
@@ -445,6 +534,18 @@ export const useEditorStore = create<EditorState>()(
                 : "Failed to delete element",
           });
         }
+      },
+
+      insertElementIntoFrame: async (element, frameId, projectId, index) => {
+        const frameElement = get()._findElementById(frameId) as FrameElement;
+        if (!frameElement || frameElement.type !== "Frame") {
+          throw new Error("Frame element not found or invalid frame ID");
+        }
+
+        const insertIndex = index !== undefined ? index : frameElement.elements.length;
+
+        // Use the existing insertElement method with the frameId as parentId
+        await get().insertElement(element, projectId, insertIndex, frameId);
       },
     }),
     {

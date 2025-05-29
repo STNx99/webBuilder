@@ -9,16 +9,19 @@ import {
 import { useEditorStore } from "@/lib/store/editorStore";
 import { useElementSelectionStore } from "@/lib/store/elementSelectionStore";
 import { EditorElement } from "@/lib/type";
+import { startTransition } from "react";
 
 export default function ImageDropDown() {
-  const { updateElement } = useEditorStore();
+  const { updateElementOptimistically } = useEditorStore();
   const { selectedElement } = useElementSelectionStore();
 
   const handleImageUrlChange = (src: string) => {
     if (!selectedElement) return;
-    updateElement(selectedElement.id, {
+    startTransition(() => {
+      updateElementOptimistically(selectedElement.id, {
       src,
     });
+    })
   };
 
   return (
@@ -27,9 +30,9 @@ export default function ImageDropDown() {
         <Button className="w-full">Image</Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56">
-        <DropdownMenuGroup>
+        <DropdownMenuGroup className="hover:bg-primary">
           <DropdownMenuItem
-            className="flex flex-col gap-2 items-start cursor-pointer w-full"
+            className="flex flex-col gap-2 items-start cursor-pointer w-full "
             onClick={(e) => e.stopPropagation()}
           >
             <p className="text-sm font-medium">Image URL</p>

@@ -1,7 +1,11 @@
-import React, { useRef } from "react";
+import React, { useRef, useState, startTransition } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { FrameElement, EditorComponentProps } from "@/lib/interface";
+import {
+  FrameElement,
+  EditorComponentProps,
+  CarouselElement,
+} from "@/lib/interface";
 import ButtonComponent from "./ButtonComponent";
 import { EditorElement } from "@/lib/type";
 import ListItemComponent from "./ListItemComponent";
@@ -11,12 +15,12 @@ import SelectComponent from "./SelectComponent";
 import ChartComponent from "./ChartComponent";
 import DataTableComponent from "./DataTableComponent";
 import FormComponent from "./FormComponent";
+import CarouselComponent from "./CarouselComponent";
 
 const FrameComponents = (props: EditorComponentProps) => {
   const { projectId, element, setShowContextMenu, setContextMenuPosition } =
     props;
   const dragConstraint = useRef<HTMLDivElement>(null);
-
   const {
     handleKeyDown,
     handleDrop,
@@ -43,11 +47,7 @@ const FrameComponents = (props: EditorComponentProps) => {
           <motion.div
             key={element.id}
             {...commonProps}
-            onDrop={(e: React.DragEvent<HTMLDivElement>) =>
-              handleDrop(e, element)
-            }
-            onDragStart={(e, info) => handleDragStart(e, element, info)}
-            onDragEnd={(e, info) => handleDragEnd(e, info)}
+            onDrop={(e)=> handleDrop(e, element)}
           >
             {(element as FrameElement).elements?.map((childElement) => (
               <React.Fragment key={childElement.id}>
@@ -65,6 +65,7 @@ const FrameComponents = (props: EditorComponentProps) => {
             setContextMenuPosition={setContextMenuPosition}
             setShowContextMenu={setShowContextMenu}
             projectId={projectId}
+            commonProps={commonProps}
           />
         );
 
@@ -164,6 +165,18 @@ const FrameComponents = (props: EditorComponentProps) => {
           />
         );
 
+      case "Carousel":
+        return (
+          <CarouselComponent
+            key={element.id}
+            element={element as CarouselElement}
+            setContextMenuPosition={setContextMenuPosition}
+            setShowContextMenu={setShowContextMenu}
+            projectId={projectId}
+            commonProps={commonProps}
+          />
+        );
+
       case "Image":
         if (element.src) {
           return (
@@ -172,7 +185,7 @@ const FrameComponents = (props: EditorComponentProps) => {
               {...commonProps}
               src={element.src}
               onDrop={(e: React.DragEvent<HTMLImageElement>) =>
-                handleImageDrop(e, element)
+                commonProps.handleImageDrop(e, element)
               }
               drag={element.isSelected}
             />
@@ -192,6 +205,7 @@ const FrameComponents = (props: EditorComponentProps) => {
             />
           );
         }
+
       default:
         return (
           <motion.div
@@ -209,27 +223,52 @@ const FrameComponents = (props: EditorComponentProps) => {
     }
   };
 
+  const [dropZoneActive, setDropZoneActive] = useState<"bottom" | null>(null);
+
   return (
-    <motion.div
-      id={element.id}
-      style={{ ...element.styles }}
-      onDrop={(e) => handleDrop(e, element)}
-      onDragStart={(e, info) => handleDragStart(e, element, info)}
-      onDragOver={(e) => e.preventDefault()}
-      onDragEnd={(e, info) => handleDragEnd(e, info)}
-      onContextMenu={(e) => handleContextMenu(e, element)}
-      onDoubleClick={(e) => handleDoubleClick(e, element)}
-      className={cn("", element.tailwindStyles, {
-        "border-black border-2 border-solid": element.isSelected,
-      })}
-      ref={dragConstraint}
-    >
-      {(element as FrameElement).elements?.map((childElement) => (
-        <React.Fragment key={childElement.id}>
-          {renderElement(childElement)}
-        </React.Fragment>
-      ))}
-    </motion.div>
+    <div className="relative">
+      <motion.div
+        id={element.id}
+        style={{ ...element.styles }}
+        onDrop={(e) => handleDrop(e, element)}
+        onDragStart={(e, info) => handleDragStart(e, element, info)}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDropZoneActive(null);
+        }}
+        onDragEnd={(e, info) => handleDragEnd(e, info)}
+        onContextMenu={(e) => handleContextMenu(e, element)}
+        onDoubleClick={(e) => handleDoubleClick(e, element)}
+        className={cn("", element.tailwindStyles, {
+          "border-black border-2 border-solid": element.isSelected,
+        })}
+        ref={dragConstraint}
+      >
+        {(element as FrameElement).elements?.map((childElement) => (
+          <React.Fragment key={childElement.id}>  
+            {renderElement(childElement)}
+          </React.Fragment>
+        ))}
+      </motion.div>
+
+      <div
+        className={cn(
+          "absolute bottom-0 left-0 w-full h-2 translate-y-full z-10",
+          {
+            "bg-blue-300 opacity-50 h-4": dropZoneActive === "bottom",
+          }
+        )}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDropZoneActive("bottom");
+        }}
+        onDragLeave={() => setDropZoneActive(null)}
+        onDrop={(e) => {
+          handleDrop(e, element);
+          setDropZoneActive(null);
+        }}
+      />
+    </div>
   );
 };
 

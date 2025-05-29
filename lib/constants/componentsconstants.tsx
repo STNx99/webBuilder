@@ -61,10 +61,10 @@ const SelectHolder = React.lazy(
   () =>
     import("@/components/editor/sidebar/sidebarcomponentholders/SelectHolder")
 );
-const ChartHolder = React.lazy(
-  () =>
-    import("@/components/editor/sidebar/sidebarcomponentholders/ChartHolder")
-);
+// const ChartHolder = React.lazy(
+//   () =>
+//     import("@/components/editor/sidebar/sidebarcomponentholders/ChartHolder")
+// );
 const DataTableHolder = React.lazy(
   () =>
     import("@/components/editor/sidebar/sidebarcomponentholders/DataTableHolder")
@@ -144,11 +144,11 @@ export const ADVANCED_COMPONENTS: DraggableComponent[] = [
     label: "Button Multi",
     type: "ButtonMulti",
   },
-  {
-    component: <ChartHolder />,
-    label: "Chart",
-    type: "Chart",
-  },
+  // {
+  //   component: <ChartHolder />,
+  //   label: "Chart",
+  //   type: "Chart",
+  // },
   {
     component: <DataTableHolder />,
     label: "Data Table",
@@ -206,5 +206,10 @@ export const COMPONENT_CATEGORIES: ComponentCategory[] = [
     id: "formComponents",
     label: "Form Components",
     prefix: "Form",
-  }
+  },
+  {
+    id: "landingPageTemplates",
+    label: "Landing Page Templates",
+    prefix: "LandingPage",
+  },
 ];
